@@ -76,10 +76,14 @@ dependencies = [
     { name = "fastapi" },
     { name = "langdetect" },
     { name = "pyphen" },
+    { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+dev = [
     { name = "pytest" },
     { name = "ruff" },
     { name = "ty" },
-    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -87,11 +91,12 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "langdetect", specifier = ">=1.0.9" },
     { name = "pyphen", specifier = ">=0.17.2" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "ruff", specifier = ">=0.15.0" },
-    { name = "ty", specifier = ">=0.0.14" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.0" },
+    { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.14" },
     { name = "uvicorn", specifier = ">=0.40.0" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "h11"

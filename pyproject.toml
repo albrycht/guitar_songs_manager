@@ -8,10 +8,14 @@ dependencies = [
     "fastapi>=0.128.0",
     "langdetect>=1.0.9",
     "pyphen>=0.17.2",
+    "uvicorn>=0.40.0",
+]
+
+[project.optional-dependencies]
+dev = [
     "pytest>=9.0.2",
     "ruff>=0.15.0",
     "ty>=0.0.14",
-    "uvicorn>=0.40.0",
 ]
 
 [tool.pytest.ini_options]

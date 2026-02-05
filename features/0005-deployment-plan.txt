@@ -1,0 +1,81 @@
+Feature 0005: Deployment plan for song.albrycht.eu (Piku)
+
+Goal
+- Deploy the FastAPI app via `git push` to Piku and serve it on `song.albrycht.eu`.
+- Keep the existing Mattermost site (`chat.albrycht.eu`) and the `pylibrus` Piku app untouched.
+
+References (Piku docs)
+- README and workflow: https://github.com/piku/piku (README)
+- Procfile format: https://piku.github.io/configuration/procfile.html
+- ENV variables and nginx settings: https://piku.github.io/configuration/env.html
+- Example apps: https://piku.github.io/community/examples.html
+- Sample Python app (Procfile/ENV patterns): https://github.com/piku/sample-python-app
+- Upcoming uv support (may remove `requirements.txt` need): https://github.com/piku/piku/pull/415
+
+App details
+- ASGI entrypoint: `app.main:app` (FastAPI).
+- SQLite database path: `data/songs.db` under the repo root (created at runtime).
+- Python requirement: `>=3.13` (see `.python-version` and `pyproject.toml`).
+
+Constraints
+- Do not modify `/etc/nginx/conf.d/default.conf` or any chat-related config.
+- Ensure the new virtual host does not conflict with `chat.albrycht.eu`.
+- Do not change the `pylibrus` app.
+
+Plan
+1) Prepare the repo for Piku
+   - Git is already set up with `origin`; no repo initialization needed.
+   - Add a `Procfile` using a `web` worker (ASGI via uvicorn):
+     - `web: uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+     - Optional: add `--workers 2` if the server has enough CPU/RAM.
+   - Add an `ENV` file to configure nginx:
+     - `NGINX_SERVER_NAME=song.albrycht.eu`
+     - `NGINX_HTTPS_ONLY=true`
+     - `PORT=8000` (or omit and let Piku set a port; `Procfile` should use `$PORT` either way)
+   - Produce `requirements.txt` for Piku installs (Piku examples use it):
+     - Generate from `pyproject.toml`/`uv.lock` (e.g. `uv export --no-dev -o requirements.txt`)
+     - Ensure runtime deps include `fastapi`, `uvicorn`, `langdetect`, `pyphen`.
+   - Decide how to satisfy Python `>=3.13` on the server:
+     - Install Python 3.13 on the server, or
+     - Lower `requires-python` to the installed version and re-lock deps.
+   - Commit repo changes (Procfile/ENV/requirements) so they can be pushed.
+
+2) Prepare the server (no changes to existing chat config)
+   - Confirm Piku is running and list apps: `piku apps`.
+   - Verify system Python version: `python3 --version`.
+   - Confirm nginx is active and can accept a new vhost for `song.albrycht.eu`.
+
+3) Create and configure the Piku app
+   - Choose app name (suggest: `song`).
+   - Create the app: `piku apps:create song` (or equivalent Piku create command).
+   - Set config values:
+     - `piku config:set song NGINX_SERVER_NAME=song.albrycht.eu NGINX_HTTPS_ONLY=true`
+     - Optional: `piku config:set song PIKU_AUTO_RESTART=true`
+
+4) Deploy via git push
+   - Add remote: `git remote add piku piku@song.albrycht.eu:song`
+   - Push: `git push piku main` (or the branch you want to deploy).
+   - Watch deploy output; fix dependency or Python version issues if they appear.
+
+5) Validate and harden
+   - Open `https://song.albrycht.eu` and confirm the UI loads.
+   - Create a song and verify persistence (SQLite DB file created in `data/`).
+   - Check logs if needed: `piku logs song`.
+   - Confirm `https://chat.albrycht.eu` still works unchanged.
+
+6) Rollback plan
+   - Re-deploy a previous commit via `git push piku <old-commit-branch>`.
+   - If needed stop the app with `piku ps:scale song web=0` and investigate.
+
+Troubleshooting notes (from deployment)
+- Hash errors: ensure `requirements.txt` lines that include hashes end with `\` so pip reads them as part of the same requirement.
+- HTTPS/ACME 403 errors:
+  - Confirm nginx user (e.g., `user nginx;` in `/etc/nginx/nginx.conf`).
+  - Add nginx user to `www-data` and restart nginx: `sudo usermod -aG www-data nginx && sudo systemctl restart nginx`.
+  - Ensure ACME paths are owned by `piku` and group `www-data` (avoid root-owned `.well-known`):
+    - `sudo chown -R piku:www-data /home/piku/.piku/acme`
+    - `sudo chmod -R g+rX /home/piku/.piku/acme`
+    - `sudo mkdir -p /home/piku/.piku/acme/.well-known/acme-challenge`
+    - `sudo chmod g+s /home/piku/.piku/acme /home/piku/.piku/acme/.well-known /home/piku/.piku/acme/.well-known/acme-challenge`
+  - Verify: `curl -i http://song.albrycht.eu/.well-known/acme-challenge/piku-test` returns 200.
+  - Then redeploy to re-run cert issuance: `git push piku master`.
