@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guitar Songs Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>🎸 Guitar Songs</h1>
+            <p>Manage your lyrics and chords</p>
+        </div>
+        <nav>
+            <button id="navHome" class="secondary">Home</button>
+            <button id="navAddSong">Add New Song</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- View: Song List -->
+        <section id="listView" class="view-section active">
+            <h2>My Songs</h2>
+            <div id="songsList" class="song-list-container">
+                <div style="padding: 1rem; color: #64748b;">Loading songs...</div>
+            </div>
+        </section>
+
+        <!-- View: Add/Edit Song -->
+        <section id="editorView" class="view-section">
+            <h2 id="editorTitle">Add New Song</h2>
+
+            <!-- Step 1: Metadata & Lyrics -->
+            <div id="editStep1">
+                <label for="songTitleInput">Song Title</label>
+                <input type="text" id="songTitleInput" placeholder="Enter song title">
+
+                <label for="songLyricsInput">Lyrics</label>
+                <textarea id="songLyricsInput" class="lyrics-input" placeholder="Paste lyrics here..."></textarea>
+
+                <div class="controls">
+                    <button onclick="app.handlers.goToChordMode()">Next: Edit Chords</button>
+                    <button class="secondary" onclick="app.router.navigate('list')">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Chord Editor -->
+            <div id="editStep2" style="display: none;">
+                <p style="color: #64748b; margin-bottom: 1rem;">Click on a letter to add/change chord.</p>
+                <div id="chordEditorContainer" class="lyrics-container editor-mode"></div>
+                <div class="controls">
+                    <button class="secondary" onclick="app.handlers.backToLyrics()">Edit Lyrics</button>
+                    <button onclick="app.handlers.saveSong()">Save Song</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Song Details (Read Only) -->
+        <section id="songView" class="view-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <h2 id="viewSongTitle">Song Title</h2>
+                <div class="controls" style="margin-top: 0; align-items: center;">
+                    <button class="secondary" onclick="app.router.navigate('list')">Back</button>
+                    <button onclick="app.handlers.editCurrentSong()">Edit</button>
+                    <button onclick="window.print()" class="secondary">Print</button>
+                    <label class="chorus-toggle">
+                        <input type="checkbox" id="expandChorusesToggle">
+                        Show all choruses
+                    </label>
+                </div>
+            </div>
+
+            <div id="viewSongContainer" class="lyrics-container"></div>
+        </section>
+    </main>
+
+    <!-- App Scripts -->
+    <script src="db.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

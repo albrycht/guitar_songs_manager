@@ -1,0 +1,19 @@
+[project]
+name = "guitar-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.128.0",
+    "langdetect>=1.0.9",
+    "pyphen>=0.17.2",
+    "pytest>=9.0.2",
+    "ruff>=0.15.0",
+    "ty>=0.0.14",
+    "uvicorn>=0.40.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

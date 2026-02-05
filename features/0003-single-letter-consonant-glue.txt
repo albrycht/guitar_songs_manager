@@ -1,0 +1,46 @@
+Feature 0003: Single-letter consonant glue for syllable matching
+
+Goal
+- Improve syllable alignment by treating single-letter consonants as glued to the next word during syllable detection.
+- Do not alter the displayed lyrics or stored text.
+
+User rule
+- Example: "Z wszystkimi znaki" should be treated as "Zwszystkimi znaki" for syllable detection.
+- Applies only to syllable detection / chord propagation logic.
+
+Scope
+- Logic-only change in Python: syllable detection helpers.
+
+Proposed behavior
+- Before syllable segmentation, transform the text for analysis:
+  - If a word is a single-letter consonant, remove the space between it and the next word.
+  - Vowel list for Polish: a, e, i, o, u, y, ą, ę, ó (case-insensitive).
+  - Example matches: "z", "w", "v" (only when a single letter and a consonant).
+- Keep a mapping between original indices and transformed indices:
+  - Needed so chord positions map correctly to original text.
+
+Implementation steps
+1) Add a helper in `app/logic/chords.py`:
+   - `transform_for_syllables(text: str) -> tuple[str, list[int]]`
+     - Returns transformed text and an index map (transformed_index -> original_index).
+2) Update `get_syllables`, `get_syllable_info`, `get_char_index_for_syllable` to:
+   - Use transformed text for syllable segmentation.
+   - Map indices back to original text using the index map.
+3) Ensure no mutation of `LineContent.text`.
+
+Index mapping strategy
+- Build a list where each character in transformed text maps to the original index.
+- When spaces are removed, the mapping skips those indices.
+- When returning a syllable start index, map via the list to original text index.
+
+Tests (pytest)
+- Add a test using the provided lyrics:
+  - Given chord `C` placed on "cie" in second line of verse 1
+  - After propagation, `C` appears on syllable "ki" in "wszystkimi" in verse 2 line 2
+  - Given chord `G` on "wi" in "Przywitać" (last line verse 1)
+  - After propagation, `G` appears on "kiej" in "wielkiej" (last line verse 2)
+- Test should assert chord indices map correctly in the returned content.
+
+Notes
+- Only applied to syllable detection and propagation.
+- Does not affect block detection or stored lyrics text.

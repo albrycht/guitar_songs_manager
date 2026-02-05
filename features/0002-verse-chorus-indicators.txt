@@ -1,0 +1,64 @@
+Feature 0002: Verse/chorus indicators in lyrics parsing
+
+Goal
+- Improve block detection by treating leading verse numbers and explicit chorus markers as strong signals.
+- Keep existing repeat-detection as a secondary signal.
+- Support chorus references (`Ref.`/`Chorus.`) that act as placeholders for repeated choruses.
+- Allow users to toggle between expanded choruses and original "Ref." placeholders.
+
+User rules
+- Verse start indicator: a line beginning with a number, optionally followed by a dot, then whitespace.
+  - Examples: "1 Wśród...", "1. Wśród..."
+- Chorus indicator: "ref\s?[.:]" or "chorus\s[:.]" (case-insensitive), anywhere at line start.
+- Marker-only chorus lines (e.g. "Ref.") can be placeholders for the previously defined chorus.
+
+Scope
+- Logic change in Python: update structure detection and chorus expansion.
+- API change: allow expanding choruses in responses.
+- UI change: add a toggle to show expanded choruses or original placeholders.
+- No visual changes.
+
+Proposed behavior
+- If a line matches a verse-start indicator, start a new block at that line.
+- If a line matches chorus indicator, start a new block at that line and mark block as chorus.
+- If both appear (e.g. "2. Ref."), chorus indicator takes precedence for block type.
+- Repeat-based detection still marks blocks as chorus if content repeats.
+- If a chorus marker line has no other text ("Ref." only), it may act as:
+  - The start of the first chorus block (followed by actual chorus lyrics), or
+  - A placeholder for a later repeated chorus (standalone block).
+- When expanding choruses:
+  - Standalone "Ref." blocks are replaced with the first chorus template.
+  - The first chorus block keeps its lyrics but drops the marker-only line.
+
+Implementation steps
+1) Update `detect_structure` in `app/logic/chords.py`:
+   - Split into blocks based on:
+     - blank lines
+     - verse-start indicator at line start
+     - chorus indicator at line start
+   - Record explicit type for blocks that begin with chorus indicator.
+2) Add `expand_chorus_references` in `app/logic/chords.py`:
+   - Identify first chorus template (excluding marker-only line).
+   - Replace standalone marker-only chorus blocks with the template.
+3) Expose optional `expand_choruses` param on `GET /api/songs/{id}`.
+4) Add a UI toggle in song view to switch expanded vs original.
+
+Parsing details
+- Regexes:
+  - Verse start: `^\s*\d+\s*\.?\s+`
+  - Chorus line: `^\s*(ref\s?[.:]|chorus\s[:.])` with `re.IGNORECASE`
+- When a chorus indicator line has additional text after the marker:
+  - Keep the line in lyrics (do not strip).
+  - It still starts a chorus block.
+
+Tests (pytest)
+- New tests in `tests/test_logic_chords.py`:
+  - Verse numbering starts a new block even without blank line.
+  - Chorus marker forces block type to chorus even if content is unique.
+  - Repeat-based chorus still works when no marker is present.
+  - Standalone "Ref." blocks expand into the chorus template and marker-only lines
+    are removed in expanded view.
+
+Notes
+- This feature only changes detection; chord propagation continues to use detected block types.
+- Chorus expansion should preserve blank lines in the output.

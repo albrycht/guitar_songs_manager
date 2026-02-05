@@ -1,0 +1,430 @@
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --bg: #f8fafc;
+    --text: #1e293b;
+    --chord-color: #dc2626;
+    --line-color: #94a3b8;
+    --border-color: #cbd5e1;
+    --card-bg: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+    margin-top: 0;
+}
+
+/* Header & Nav */
+header {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.brand h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.brand p {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+nav button {
+    margin-left: 0.5rem;
+}
+
+/* Views Logic */
+.view-section {
+    display: none;
+}
+
+.view-section.active {
+    display: block;
+}
+
+/* Buttons */
+button {
+    padding: 0.6rem 1.2rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: var(--primary-hover);
+}
+
+button.secondary {
+    background-color: #64748b;
+}
+
+button.secondary:hover {
+    background-color: #475569;
+}
+
+button.danger {
+    background-color: #ef4444;
+}
+
+button.danger:hover {
+    background-color: #dc2626;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Input Fields */
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+textarea.lyrics-input {
+    height: 300px;
+    font-family: monospace;
+}
+
+/* Song List */
+.song-list-container {
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+}
+
+.song-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.song-item:last-child {
+    border-bottom: none;
+}
+
+.song-item:hover {
+    background-color: #f1f5f9;
+}
+
+.song-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Editor / Viewer Container */
+.lyrics-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+}
+
+/* Line & Chord Rendering (Ported from prototype) */
+.lyric-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    /* margin-bottom: 1.5rem; */
+
+    /* Ensure space for chords that are absolutely positioned above */
+    margin-top: 1rem;
+    /* min-height: 3.5rem; */
+}
+
+.char-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 1ch;
+    transition: background 0.2s;
+    border-radius: 4px;
+    margin-right: 0px;
+    position: relative;
+}
+
+.editor-mode .char-wrapper {
+    cursor: pointer;
+}
+
+.editor-mode .char-wrapper:hover {
+    background-color: #e2e8f0;
+}
+
+.letter {
+    font-size: 1.2rem;
+    line-height: 1.5;
+    font-family: monospace;
+    white-space: pre;
+    text-align: left;
+    display: flex;
+}
+
+.letter::after {
+    content: '';
+    flex-grow: 1;
+    border-bottom: 2px solid var(--line-color);
+    margin-bottom: 5px;
+    margin-left: 1px;
+    min-width: 0;
+}
+
+.char-wrapper.is-space .letter::after {
+    display: none;
+}
+
+.chord {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--chord-color);
+    height: 1.2em;
+    min-width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    padding: 0 1px;
+    margin-bottom: 2px;
+
+    /* Default: floating above, not affecting width */
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    text-align: left;
+    /* Align to start of letter */
+}
+
+/* Auto-assigned chord style */
+.chord.auto {
+    color: #16a34a;
+}
+
+.chorus-line {
+    border-left: 2px solid #e11d48;
+    /* Red/Pink accent */
+    padding-left: 1.5rem;
+    margin-left: 0.5rem;
+    background-color: rgba(225, 29, 72, 0.05);
+    /* Slight tint for chorus */
+}
+
+/* When collision detected, put back in flow to push neighbors */
+.char-wrapper.collision-detected .chord {
+    position: static;
+    text-align: center;
+    /* Or left? Center aligns with letter better if single char */
+}
+
+/* Also ensure letter::after is only visible if we need spacing?
+   Actually, the user wants letter::after to be the mechanism.
+   If we are in flow (collision), the wrapper expands.
+   The letter element fills the width?
+   We need letter::after to fill the rest if the chord is wider than the letter.
+*/
+
+/* Hide ::after by default (when no collision/floating) */
+.letter::after {
+    content: '';
+    flex-grow: 1;
+    border-bottom: 2px solid var(--line-color);
+    margin-bottom: 5px;
+    margin-left: 1px;
+    min-width: 0;
+    display: none;
+    /* Hidden by default per user request logic */
+}
+
+/* Show ::after when collision detected */
+.char-wrapper.collision-detected .letter::after {
+    display: block;
+    /* or flex item default */
+}
+
+.chord:empty::after {
+    content: "\00a0";
+    visibility: hidden;
+}
+
+.controls {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.chorus-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+/* Print Styles */
+@media print {
+    body {
+        padding: 0;
+        background: white;
+        max-width: none;
+    }
+
+    header,
+    .controls,
+    .view-section:not(.active) {
+        display: none;
+    }
+
+    .lyrics-container {
+        box-shadow: none;
+        padding: 0;
+    }
+}
+
+/* Chord Input Popup */
+.chord-input-popup {
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    border: 1px solid var(--primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 0.25rem;
+    display: flex;
+    gap: 0.25rem;
+    transform: translate(-50%, -100%);
+    /* Center above the target */
+    margin-top: -5px;
+}
+
+.chord-input-popup input {
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    width: 80px;
+    margin: 0;
+    /* Override explicit input margin */
+    outline: none;
+    color: var(--chord-color);
+}
+
+.chord-input-popup input:focus {
+    border-color: var(--primary);
+}
+
+.chord-input-popup button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* Drag and Drop Styles */
+.chord[draggable="true"] {
+    cursor: grab;
+}
+
+.chord[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.chord.dragging {
+    opacity: 0.5;
+}
+
+.char-wrapper.drag-over {
+    background-color: #bfdbfe !important;
+    /* light blue highlight */
+    border-radius: 4px;
+}
+
+/* Language Selector */
+.language-selector {
+    position: relative;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f1f5f9;
+    padding: 0.5rem;
+    border-radius: 6px;
+    width: fit-content;
+}
+
+.lang-current {
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--text);
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    user-select: none;
+}
+
+.lang-current:hover {
+    background: #cbd5e1;
+}
+
+.lang-menu {
+    position: absolute;
+    top: 100%;
+    left: 80px;
+    /* Offset from label */
+    background: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    border-radius: 6px;
+    margin-top: 4px;
+    z-index: 1001;
+    min-width: 120px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.lang-menu div {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.lang-menu div:hover {
+    background: #f1f5f9;
+}

@@ -1,0 +1,52 @@
+Feature 0004: Inline chord notation with curly braces
+
+Goal
+- Support lyrics that embed chords in curly braces, e.g. `{G}W śród {D}nocnej ciszy`.
+- Chords should attach to the next syllable/letter position without altering displayed lyrics.
+- Support trailing chords at end of verse: `A witając zawołali{G}{D}` attaches to empty end-of-line, not next line.
+
+Scope
+- Parsing + data model transformation for lyrics input.
+- No changes to visual layout; chords appear in editor/view as usual.
+
+Desired behavior
+- Curly brace chord tokens are removed from lyric text but used to populate chord positions.
+- Chord placement rules:
+  - If token appears between syllables, attach to the next syllable start.
+  - If token appears mid-syllable, attach to that syllable start.
+  - If token appears at end-of-line, attach to an "end-of-line" chord slot (empty space).
+    - Implemented as `char_index == len(line.text)` with a virtual position.
+
+Implementation steps
+1) Add a parsing helper in `app/services/content.py`:
+   - `extract_inline_chords(lyrics: str, language: str) -> tuple[str, list[dict]]`
+   - For each line:
+     - Parse tokens like `{G}`, `{Dm7}`, `{C#}`.
+     - Remove tokens from the lyric text.
+     - Compute attachment index per token using syllable helper functions.
+2) Extend `LineContent.chords` to allow `char_index == len(text)` (end-of-line).
+3) Update `build_content_from_lyrics`:
+   - Use parsed lyric text.
+   - Apply extracted chords into `LineContent.chords` as `manual`.
+4) Update UI rendering in `app/static/app.js`:
+   - Render an extra "virtual" char wrapper at the end of line for chords at `char_index == text.length`.
+   - Allow clicking this space to add/edit chord.
+5) Update chord propagation:
+   - Ensure `get_char_index_for_syllable` can return `len(text)` for EOL when a chord token is at end.
+   - For propagation, when target line is shorter, only apply if target has same relative line count and index is valid (including EOL).
+
+Parsing details
+- Chord token regex: `\{([^}]+)\}` (non-empty).
+- Use the current language (or detected language) for syllable boundaries.
+- Mapping from token position in the raw line to an index in the cleaned line:
+  - Maintain a raw-to-clean index mapping while stripping tokens.
+  - Compute syllable based on cleaned text and index mapping.
+
+Tests (pytest)
+- Add tests in `tests/test_logic_chords.py`:
+  - Inline tokens are removed from lyrics text and mapped into chords.
+  - `{G}W śród {D}nocnej ciszy` yields two chords at correct syllable indices.
+  - Trailing `{G}{D}` after line text maps to `char_index == len(text)` and does not attach to next line.
+
+Notes
+- This feature touches both backend parsing and frontend render/interaction for EOL chords.

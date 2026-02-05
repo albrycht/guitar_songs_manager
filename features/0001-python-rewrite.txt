@@ -1,0 +1,96 @@
+Feature 0001: Python rewrite (FastAPI + SQLite)
+
+Goal
+- Rewrite the current single-page app into a FastAPI application with SQLite for storage.
+- Keep visuals and layout unchanged; move app logic (song structure, chord propagation) to Python.
+- Expose separate endpoints for: list_songs, show_song, add/edit lyrics, add/edit chords.
+- Make chord-matching logic testable via pytest without starting the web app.
+
+Scope and assumptions
+- UI stays the same HTML/CSS; JS becomes a thin client that calls the backend for all logic.
+- SQLite stores songs and chord data as JSON (single-table model).
+- Existing chord propagation behavior is preserved unless explicitly changed.
+- Provide a way to preview auto-matched chords immediately after a chord edit.
+- Chord collision detection remains UI-only.
+- Python code is fully typed; use `ty` for type checking.
+
+High-level architecture
+- FastAPI app that serves:
+  - Static assets: `index.html`, `style.css`, existing JS (updated to call API).
+  - JSON API for data and logic.
+- Core logic extracted to pure Python modules (no FastAPI imports) so pytest can run directly.
+- Database layer using SQLAlchemy or SQLModel, plus migrations (optional, e.g. Alembic).
+- Use `pyproject.toml` managed by `uv`.
+
+Proposed project layout
+- `app/`
+  - `main.py` (FastAPI app, router registration, static mount)
+  - `api/` (routers)
+  - `models/` (SQLAlchemy/SQLModel models)
+  - `schemas/` (Pydantic request/response models)
+  - `logic/` (pure functions: structure detection, syllables, propagation)
+  - `services/` (db access, orchestration, content serialization)
+  - `static/` (HTML/CSS/JS from current app)
+- `tests/`
+  - `test_logic_*.py` (unit tests for logic module)
+  - `test_api_*.py` (optional, fast tests using TestClient)
+
+Data model (SQLite)
+Single JSON field (closest to current app)
+- `songs` table:
+  - `id` (int, pk)
+  - `title` (text)
+  - `content_json` (text) -- list of line objects with text, chords, section
+  - `created_at`, `updated_at`
+Pros: simple, matches current structure. Cons: harder to query chords.
+
+API endpoints (minimum)
+- `GET /api/songs` (list_songs) -> list of {id, title, updated_at}
+- `GET /api/songs/{id}` (show_song) -> full song content
+- `POST /api/songs` (add lyrics) -> create song from title + lyrics text
+- `PUT /api/songs/{id}/lyrics` (edit lyrics) -> update title + lyrics, re-run structure detection
+- `PUT /api/songs/{id}/chords` (add/edit chords) -> update chord map, run propagation
+
+Logic endpoints for immediate matching (to keep UI responsive)
+- `POST /api/chords/preview` -> accepts current content + change (line/char/chord)
+  - returns updated content with auto-chords applied
+  - used by JS on every chord edit for "instant" matching
+
+Logic extraction (pure Python)
+Move the following into `app/logic/`:
+- `detect_structure(lines)` -> identify verses/choruses by repeated blocks
+- `get_syllables(text, lang)` -> syllable segmentation (use `pyphen`)
+- `get_syllable_info(text, char_index, lang)` -> syllable index + offset
+- `get_char_index_for_syllable(text, syllable_index, lang)`
+- `propagate_chords(lines, line_index, char_index, chord_text, lang)`
+
+Language + syllables
+- Use `pyphen` for syllable hyphenation per language.
+- Use `langdetect` or `langid` to detect language from lyrics (fallback to `pl`).
+- Cache hyphenators per language in the logic module.
+
+Testing strategy (pytest, no app start required)
+- Unit tests for each pure function:
+  - `detect_structure` identifies repeated chorus blocks.
+  - `get_syllables` and `get_syllable_info` on Polish + English examples.
+  - `propagate_chords` for verse/chorus propagation rules, including mismatched line counts.
+- These tests import only `app/logic/*` and run in isolation.
+- Optional API tests use FastAPI TestClient (still no server process).
+
+Advice for "matching chords as soon as user adds any chord"
+- Keep UI identical but change chord edit handler to call `/api/chords/preview`.
+- Backend runs `propagate_chords` and returns updated content; JS re-renders.
+- This keeps all logic in Python while preserving immediate feedback.
+
+Implementation steps (plan)
+1) Initialize Python project with `uv` and `pyproject.toml`.
+2) Add FastAPI, Uvicorn, SQLAlchemy/SQLModel, Pydantic, pytest, pyphen, langdetect, ruff, ty.
+3) Implement SQLite connection and `songs` model.
+4) Port logic functions from `app.js` to `app/logic/` with tests.
+5) Implement API endpoints (CRUD + preview).
+6) Move static files into `app/static/` and update JS to use API calls.
+7) Run `uv run ruff check` and `uv run ruff format` on the repo after any Python change, fix any issues.
+8) Verify UI parity and run tests.
+
+Open questions
+- Confirm preferred language detection library.
