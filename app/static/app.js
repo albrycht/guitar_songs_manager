@@ -4,7 +4,10 @@ const app = {
         editingContent: null,
         currentLanguage: null,
         languageLocked: false,
-        expandChoruses: false
+        expandChoruses: false,
+        showChords: true,
+        currentViewContent: null,
+        copyToastTimer: null
     },
 
     router: {
@@ -78,7 +81,13 @@ const app = {
             DB.init();
 
             // Bind Nav
-            document.getElementById('navHome').onclick = () => app.router.navigate('list');
+            const navHome = document.getElementById('navHome');
+            if (navHome) {
+                navHome.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    app.router.navigate('list');
+                });
+            }
             document.getElementById('navAddSong').onclick = () => app.handlers.startNewSong();
 
             const chorusToggle = document.getElementById('expandChorusesToggle');
@@ -90,6 +99,22 @@ const app = {
                         app.handlers.viewSong(app.state.currentSongId, false);
                     }
                 };
+            }
+
+            const showChordsToggle = document.getElementById('showChordsToggle');
+            if (showChordsToggle) {
+                showChordsToggle.checked = app.state.showChords;
+                showChordsToggle.onchange = () => {
+                    app.state.showChords = showChordsToggle.checked;
+                    app.ui.applyShowChords();
+                };
+            }
+
+            const copyButton = document.getElementById('copySongButton');
+            if (copyButton) {
+                copyButton.addEventListener('click', () => {
+                    void app.handlers.copySongLyrics();
+                });
             }
 
             // Back/Forward button handler
@@ -117,26 +142,39 @@ const app = {
         loadSongsList: async () => {
             console.log("Loading songs list...");
             const container = document.getElementById('songsList');
-            container.innerHTML = '<div style="padding:1rem">Loading...</div>';
+            container.innerHTML = '<div class="state-message">Loading...</div>';
 
             const { data, error } = await DB.fetchSongs();
             if (error) {
                 console.error("Error fetching songs:", error);
-                container.innerHTML = `<div style="padding:1rem; color:red">Error loading songs: ${error.message}</div>`;
+                container.innerHTML = `<div class="state-message error">Error loading songs: ${error.message}</div>`;
                 return;
             }
 
             container.innerHTML = '';
             if (!data || data.length === 0) {
-                container.innerHTML = '<div style="padding:1rem">No songs found. Add one!</div>';
+                container.innerHTML = '<div class="state-message">No songs yet. Create your first one.</div>';
                 return;
             }
 
             data.forEach(song => {
                 const el = document.createElement('div');
                 el.className = 'song-item';
-                el.innerHTML = `<div class="song-title">${song.title}</div>`;
+                el.tabIndex = 0;
+                el.setAttribute('role', 'button');
+                el.innerHTML = `
+                    <div class="song-item-content">
+                        <div class="song-title">${song.title}</div>
+                    </div>
+                    <span class="song-chevron" aria-hidden="true">›</span>
+                `;
                 el.onclick = () => app.router.navigate('song', { id: song.id });
+                el.onkeydown = (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        app.router.navigate('song', { id: song.id });
+                    }
+                };
                 container.appendChild(el);
             });
         },
@@ -169,7 +207,9 @@ const app = {
                 chorusToggle.checked = app.state.expandChoruses;
             }
             document.getElementById('viewSongTitle').innerText = data.title;
+            app.state.currentViewContent = data.content;
             app.ui.renderSong(data.content, document.getElementById('viewSongContainer'), false);
+            app.ui.applyShowChords();
             if (navigate) app.router.navigate('song', { id: id });
         },
 
@@ -275,6 +315,33 @@ const app = {
                 } else {
                     app.router.navigate('list');
                 }
+            }
+        },
+
+        copySongLyrics: async () => {
+            const content = app.state.currentViewContent;
+            if (!content || !Array.isArray(content)) {
+                alert("No song loaded to copy.");
+                return;
+            }
+
+            const includeChords = app.state.showChords;
+            const text = app.ui.buildCopyText(content, includeChords);
+            if (!text) {
+                alert("Nothing to copy.");
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    app.ui.fallbackCopyText(text);
+                }
+                app.ui.showCopyToast();
+            } catch (err) {
+                app.ui.fallbackCopyText(text);
+                app.ui.showCopyToast();
             }
         },
 
@@ -441,7 +508,7 @@ const app = {
                 }
 
                 const addWrapper = (char, charIndex, isEol = false) => {
-                    const wrapper = document.createElement('div');
+                    const wrapper = document.createElement('span');
                     wrapper.className = 'char-wrapper';
                     if (char === ' ') wrapper.classList.add('is-space');
                     if (isEol) {
@@ -455,7 +522,7 @@ const app = {
                     wrapper.dataset.lineIndex = lineIndex;
                     wrapper.dataset.charIndex = charIndex;
 
-                    const chordSpan = document.createElement('div');
+                    const chordSpan = document.createElement('span');
                     chordSpan.className = 'chord';
 
                     // Check if chord exists
@@ -474,7 +541,7 @@ const app = {
                         }
                     }
 
-                    const letterSpan = document.createElement('div');
+                    const letterSpan = document.createElement('span');
                     letterSpan.className = 'letter';
                     if (isEol) {
                         letterSpan.innerText = '\u00A0';
@@ -640,6 +707,70 @@ const app = {
             });
 
             return lines;
+        },
+
+        applyShowChords: () => {
+            const container = document.getElementById('viewSongContainer');
+            if (!container) return;
+            container.classList.toggle('hide-chords', !app.state.showChords);
+        },
+
+        buildCopyText: (content, includeChords) => {
+            return content
+                .map(lineObj => app.ui.formatCopyLine(lineObj, includeChords))
+                .join('\n');
+        },
+
+        formatCopyLine: (lineObj, includeChords) => {
+            const text = (lineObj && typeof lineObj.text === 'string') ? lineObj.text : '';
+            if (!includeChords || !lineObj || !lineObj.chords) {
+                return text;
+            }
+
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                const chordText = app.ui.getChordText(lineObj.chords[i]);
+                if (chordText) {
+                    result += `{${chordText}}`;
+                }
+                result += text[i];
+            }
+
+            const eolChord = app.ui.getChordText(lineObj.chords[text.length]);
+            if (eolChord) {
+                result += `{${eolChord}}`;
+            }
+
+            return result;
+        },
+
+        getChordText: (chordData) => {
+            if (!chordData) return '';
+            return typeof chordData === 'string' ? chordData : chordData.text;
+        },
+
+        fallbackCopyText: (text) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+        },
+
+        showCopyToast: () => {
+            const toast = document.getElementById('copyToast');
+            if (!toast) return;
+            toast.classList.add('is-visible');
+            if (app.state.copyToastTimer) {
+                clearTimeout(app.state.copyToastTimer);
+            }
+            app.state.copyToastTimer = setTimeout(() => {
+                toast.classList.remove('is-visible');
+            }, 1500);
         }
     }
 };

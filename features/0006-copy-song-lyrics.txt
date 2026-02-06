@@ -1,0 +1,30 @@
+Feature 0006: Copy song lyrics with optional chords
+
+Goal
+- Add a copy icon in the song view to copy lyrics.
+- Respect the "Expand choruses" toggle when copying.
+- Add a "Show chords" toggle that controls inline chord output.
+- Show a small confirmation toast after copy.
+
+Scope
+- Song details (read-only) view only.
+- No changes to the editor workflow.
+
+Desired behavior
+- Copy icon appears at the top-right of the lyrics box.
+- Clicking the icon copies the currently displayed song text.
+- If "Expand choruses" is on, the copied text includes the expanded chorus content.
+- If "Show chords" is on (default), chords are inserted as curly-brace tokens:
+  - Example: chord C on the word "Gdy" copies as "{C}Gdy".
+  - End-of-line chords append as "{C}" after the line text.
+- If "Show chords" is off, copy uses plain lyrics without chord tokens.
+- A short "Copied" toast appears after clicking the icon.
+
+Implementation steps
+1) Add the copy icon button and "Show chords" switch in `app/static/index.html`.
+2) Style the copy button and toast in `app/static/style.css`.
+3) Implement copy formatting + clipboard fallback in `app/static/app.js`.
+4) Ensure copy respects `expandChoruses` and `showChords` state.
+
+Notes
+- Use a Heroicons outline icon for the copy button.

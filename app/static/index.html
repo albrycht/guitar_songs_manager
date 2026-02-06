@@ -4,77 +4,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guitar Songs Manager</title>
+    <title>Guitar Songs</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
 
-    <header>
-        <div class="brand">
-            <h1>🎸 Guitar Songs</h1>
-            <p>Manage your lyrics and chords</p>
-        </div>
-        <nav>
-            <button id="navHome" class="secondary">Home</button>
-            <button id="navAddSong">Add New Song</button>
+    <header class="site-header">
+        <a id="navHome" class="brand-link" href="/">
+            <span class="brand-icon" aria-hidden="true">🎸</span>
+            <span class="brand-text">
+                <span class="brand-title">Guitar Songs</span>
+                <span class="brand-subtitle">Manage your lyrics and chords</span>
+            </span>
+        </a>
+        <nav class="top-actions">
+            <button id="navAddSong" class="btn">
+                <span class="btn-icon" aria-hidden="true">＋</span>
+                New song
+            </button>
         </nav>
     </header>
 
-    <main>
+    <main class="page">
         <!-- View: Song List -->
         <section id="listView" class="view-section active">
-            <h2>My Songs</h2>
-            <div id="songsList" class="song-list-container">
-                <div style="padding: 1rem; color: #64748b;">Loading songs...</div>
+            <div class="section-header">
+                <div>
+                    <h2>My Songs</h2>
+                </div>
+            </div>
+            <div id="songsList" class="song-list">
+                <div class="state-message">Loading songs...</div>
             </div>
         </section>
 
         <!-- View: Add/Edit Song -->
         <section id="editorView" class="view-section">
-            <h2 id="editorTitle">Add New Song</h2>
+            <div class="section-header">
+                <div>
+                    <h2 id="editorTitle">Add New Song</h2>
+                    <p class="section-subtitle">Add lyrics first, then place chords.</p>
+                </div>
+            </div>
 
             <!-- Step 1: Metadata & Lyrics -->
-            <div id="editStep1">
-                <label for="songTitleInput">Song Title</label>
+            <div id="editStep1" class="form-card">
+                <label for="songTitleInput">Song title</label>
                 <input type="text" id="songTitleInput" placeholder="Enter song title">
 
                 <label for="songLyricsInput">Lyrics</label>
                 <textarea id="songLyricsInput" class="lyrics-input" placeholder="Paste lyrics here..."></textarea>
 
                 <div class="controls">
-                    <button onclick="app.handlers.goToChordMode()">Next: Edit Chords</button>
-                    <button class="secondary" onclick="app.router.navigate('list')">Cancel</button>
+                    <button class="btn" onclick="app.handlers.goToChordMode()">Next: Edit Chords</button>
+                    <button class="btn ghost" onclick="app.router.navigate('list')">Cancel</button>
                 </div>
             </div>
 
             <!-- Step 2: Chord Editor -->
-            <div id="editStep2" style="display: none;">
-                <p style="color: #64748b; margin-bottom: 1rem;">Click on a letter to add/change chord.</p>
+            <div id="editStep2" class="editor-step" style="display: none;">
+                <p class="helper-text">Click on a letter to add or change a chord.</p>
                 <div id="chordEditorContainer" class="lyrics-container editor-mode"></div>
                 <div class="controls">
-                    <button class="secondary" onclick="app.handlers.backToLyrics()">Edit Lyrics</button>
-                    <button onclick="app.handlers.saveSong()">Save Song</button>
+                    <button class="btn ghost" onclick="app.handlers.backToLyrics()">Edit Lyrics</button>
+                    <button class="btn" onclick="app.handlers.saveSong()">Save Song</button>
                 </div>
             </div>
         </section>
 
         <!-- View: Song Details (Read Only) -->
         <section id="songView" class="view-section">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                <h2 id="viewSongTitle">Song Title</h2>
-                <div class="controls" style="margin-top: 0; align-items: center;">
-                    <button class="secondary" onclick="app.router.navigate('list')">Back</button>
-                    <button onclick="app.handlers.editCurrentSong()">Edit</button>
-                    <button onclick="window.print()" class="secondary">Print</button>
-                    <label class="chorus-toggle">
+            <div class="song-header">
+                <div class="song-title-row">
+                    <button class="icon-btn" onclick="app.router.navigate('list')" aria-label="Back to song list">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h2 id="viewSongTitle" class="song-title">Song Title</h2>
+                    </div>
+                </div>
+                <div class="icon-actions">
+                    <button class="icon-btn" onclick="app.handlers.editCurrentSong()" aria-label="Edit song">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 20h9" stroke="currentColor" stroke-width="2" fill="none"
+                                stroke-linecap="round" />
+                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" stroke="currentColor"
+                                stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                    <button class="icon-btn" onclick="window.print()" aria-label="Print song">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 9V4h12v5" stroke="currentColor" stroke-width="2" fill="none"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <rect x="6" y="14" width="12" height="6" rx="2" stroke="currentColor" stroke-width="2"
+                                fill="none" />
+                            <rect x="4" y="9" width="16" height="6" rx="2" stroke="currentColor" stroke-width="2"
+                                fill="none" />
+                        </svg>
+                    </button>
+                    <label class="toggle">
+                        <input type="checkbox" id="showChordsToggle" checked>
+                        <span class="toggle-track" aria-hidden="true"></span>
+                        <span class="toggle-label">Show chords</span>
+                    </label>
+                    <label class="toggle">
                         <input type="checkbox" id="expandChorusesToggle">
-                        Show all choruses
+                        <span class="toggle-track" aria-hidden="true"></span>
+                        <span class="toggle-label">Expand choruses</span>
                     </label>
                 </div>
             </div>
 
-            <div id="viewSongContainer" class="lyrics-container"></div>
+            <div class="lyrics-wrapper">
+                <button id="copySongButton" class="icon-btn copy-btn" aria-label="Copy song lyrics">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                            d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75A1.125 1.125 0 0 1 3.75 20.625V7.875c0-.621.504-1.125 1.125-1.125H6.75m8.25 10.5H18a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 6.75 6v9a2.25 2.25 0 0 0 2.25 2.25h6.75Z"
+                            stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <div id="copyToast" class="copy-toast" role="status" aria-live="polite">Copied</div>
+                <div id="viewSongContainer" class="lyrics-container reading"></div>
+            </div>
         </section>
     </main>
 
